@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sales Trainer: Task Analysis World</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --mario-red: #ff3333;
+            --mario-blue: #3355ff;
+            --sky-blue: #6b8cff;
+            --ground-brown: #5c3c1e;
+            --coin-gold: #ffcc00;
+            --brick-color: #b85c38;
+            --text-shadow: 2px 2px 0px #000;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #222;
+            font-family: 'Press Start 2P', cursive; /* Font 8-bit */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            color: white;
+        }
+
+        /* Khung Game Giả Lập */
+        #game-console {
+            width: 100%;
+            max-width: 800px;
+            height: 600px;
+            background-color: var(--sky-blue);
+            position: relative;
+            overflow: hidden;
+            border: 4px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+
+        /* Màn hình nền (Mây, Đồi) */
+        .scenery {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .cloud {
+            position: absolute;
+            background: rgba(255,255,255,0.8);
+            border-radius: 20px;
+            animation: moveCloud 20s linear infinite;
+        }
+        .cloud.c1 { width: 100px; height: 40px; top: 10%; left: -100px; }
+        .cloud.c2 { width: 140px; height: 50px; top: 20%; left: -150px; animation-duration: 35s; }
+
+        @keyframes moveCloud {
+            0% { left: -150px; }
+            100% { left: 100%; }
+        }
+
+        .ground {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 60px;
+            background-color: var(--ground-brown);
+            border-top: 5px solid #000;
+            background-image: 
+                linear-gradient(45deg, #754d26 25%, transparent 25%), 
+                linear-gradient(-45deg, #754d26 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #754d26 75%), 
+                linear-gradient(-45deg, transparent 75%, #754d26 75%);
+            background-size: 20px 20px;
+        }
+
+        /* UI Header */
+        .hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            text-transform: uppercase;
+            font-size: 14px;
+            z-index: 100;
+            text-shadow: var(--text-shadow);
+        }
+
+        .score-box div { margin-bottom: 5px; }
+
+        /* Màn hình chính */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            background: rgba(0,0,0,0.7);
+            transition: opacity 0.5s;
+        }
+
+        .screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .title-text {
+            color: var(--mario-red);
+            font-size: 30px;
+            margin-bottom: 20px;
+            text-shadow: 4px 4px 0px #fff;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .btn-start {
+            background: var(--coin-gold);
+            border: 4px solid #fff;
+            padding: 15px 30px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 16px;
+            color: #000;
+            cursor: pointer;
+            box-shadow: 4px 4px 0px #000;
+            transition: transform 0.1s;
+        }
+        
+        .btn-start:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px #000;
+        }
+
+        /* Khu vực câu hỏi (Question Block) */
+        #game-play {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: none; /* Hiện khi chơi */
+            flex-direction: column;
+            align-items: center;
+            padding-top: 80px;
+        }
+
+        .question-box {
+            background: #fff;
+            border: 4px solid #000;
+            border-radius: 8px;
+            padding: 20px;
+            width: 80%;
+            max-width: 600px;
+            color: #333;
+            font-family: 'Roboto', sans-serif; /* Dùng font thường cho dễ đọc câu hỏi dài */
+            font-size: 18px;
+            line-height: 1.5;
+            box-shadow: 8px 8px 0px rgba(0,0,0,0.3);
+            margin-bottom: 30px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .question-badge {
+            position: absolute;
+            top: -15px;
+            left: -15px;
+            background: var(--mario-red);
+            color: white;
+            padding: 5px 10px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 12px;
+            border: 2px solid #000;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            width: 80%;
+            max-width: 600px;
+        }
+
+        .option-brick {
+            background-color: var(--brick-color);
+            border: 4px solid #000;
+            color: white;
+            padding: 15px;
+            cursor: pointer;
+            font-family: 'Roboto', sans-serif;
+            font-weight: bold;
+            text-align: center;
+            position: relative;
+            box-shadow: inset -4px -4px 0px rgba(0,0,0,0.2), 4px 4px 0px #000;
+            transition: transform 0.1s;
+        }
+        
+        .option-brick:hover {
+            background-color: #d16b45;
+        }
+
+        .option-brick:active {
+            transform: translateY(4px);
+            box-shadow: inset -4px -4px 0px rgba(0,0,0,0.2), 0px 0px 0px #000;
+        }
+
+        .option-brick::before {
+            content: "?";
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            width: 20px;
+            height: 20px;
+            background: var(--coin-gold);
+            color: #000;
+            font-family: 'Press Start 2P';
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #000;
+        }
+
+        /* Character & Monster */
+        .character-container {
+            position: absolute;
+            bottom: 60px; /* Trên mặt đất */
+            left: 50px;
+            width: 50px;
+            height: 50px;
+            transition: bottom 0.3s ease-out;
+            z-index: 5;
+        }
+
+        /* Pixel Art Mario Trainer via CSS */
+        .pixel-trainer {
+            width: 40px;
+            height: 40px;
+            background: var(--mario-red);
+            box-shadow: 
+                4px 0 var(--mario-red), -4px 0 var(--mario-red),
+                0 -4px var(--mario-red), 0 4px var(--mario-blue),
+                4px 4px var(--mario-blue), -4px 4px var(--mario-blue);
+            position: relative;
+        }
+        
+        /* Animation Jump */
+        .jump {
+            animation: jumpAction 0.5s ease;
+        }
+
+        @keyframes jumpAction {
+            0% { bottom: 60px; }
+            50% { bottom: 180px; }
+            100% { bottom: 60px; }
+        }
+
+        .enemy-container {
+            position: absolute;
+            bottom: 60px;
+            right: 50px;
+            width: 50px;
+            height: 50px;
+            z-index: 5;
+            transition: opacity 0.5s, right 0.5s;
+        }
+        
+        /* Pixel Art Enemy (Goomba style but "Bug") */
+        .pixel-bug {
+            width: 40px;
+            height: 30px;
+            background: #8B4513;
+            margin-top: 10px;
+            position: relative;
+            box-shadow: 0px 4px 0px #000;
+        }
+        .pixel-bug::after {
+            content: "ERR";
+            font-size: 10px;
+            color: #fff;
+            position: absolute;
+            top: 8px;
+            left: 5px;
+        }
+
+        /* Feedback Effects */
+        .feedback-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 40px;
+            color: var(--coin-gold);
+            text-shadow: 2px 2px #000;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translate(-50%, -50%); }
+            100% { opacity: 0; transform: translate(-50%, -150%); }
+        }
+
+        /* Búa Gõ (Hammer) Styles */
+        .hammer {
+            position: absolute;
+            top: -40px;
+            right: -20px;
+            width: 30px;
+            height: 30px;
+            display: none;
+            transform-origin: bottom right;
+            z-index: 20;
+        }
+
+        /* Vẽ búa bằng CSS box-shadow */
+        .pixel-hammer-art {
+            width: 10px;
+            height: 10px;
+            background: #5c3c1e; /* Cán búa */
+            box-shadow: 
+                0 -10px #333, 10px -10px #333, -10px -10px #333, /* Đầu búa */
+                0 -20px #333;
+            position: relative;
+            transform: rotate(-45deg);
+        }
+
+        .bonk-animate {
+            display: block;
+            animation: bonk 0.4s ease-in-out;
+        }
+
+        @keyframes bonk {
+            0% { transform: rotate(45deg); opacity: 0; top: -60px; }
+            50% { transform: rotate(-45deg); opacity: 1; top: -30px; }
+            100% { transform: rotate(45deg); opacity: 0; top: -60px;}
+        }
+
+        /* Confetti Styles */
+        .confetti-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 90;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #fff;
+            animation: fall linear forwards;
+        }
+
+        @keyframes fall {
+            to {
+                transform: translateY(600px) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 600px) {
+            .options-grid {
+                grid-template-columns: 1fr;
+            }
+            .question-box {
+                font-size: 14px;
+                width: 90%;
+            }
+            .title-text {
+                font-size: 20px;
+            }
+            #game-console {
+                border-radius: 0;
+                border: none;
+                height: 100vh;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-console">
+        <!-- HUD -->
+        <div class="hud">
+            <div class="score-box">
+                <div>ĐIỂM SỐ</div>
+                <div id="score">000000</div>
+            </div>
+            <div class="score-box">
+                <div>MÀN</div>
+                <div id="level">1-1</div>
+            </div>
+            <div class="score-box">
+                <div>LỖI CÒN</div>
+                <div id="lives">X 3</div>
+            </div>
+        </div>
+
+        <!-- Background Elements -->
+        <div class="scenery">
+            <div class="cloud c1"></div>
+            <div class="cloud c2"></div>
+        </div>
+        <div class="ground"></div>
+
+        <!-- Start Screen -->
+        <div id="start-screen" class="screen">
+            <h1 class="title-text">SUPER SALES<br>TRAINER</h1>
+            <p style="margin-bottom: 30px; color: #fff; font-size: 12px; text-align:center; max-width: 80%;">Tiêu diệt các lỗi "Phân Tích Nhiệm Vụ"<br>để cứu Doanh Số!</p>
+            <button class="btn-start" onclick="startGame()">PRESS START</button>
+        </div>
+
+        <!-- End Screen -->
+        <div id="end-screen" class="screen hidden">
+            <h1 class="title-text" id="end-title">MISSION COMPLETE!</h1>
+            <p style="margin-bottom: 20px; color: #fff;">ĐIỂM CỦA BẠN</p>
+            <h2 style="color: var(--coin-gold); font-size: 40px; margin-bottom: 30px;" id="final-score">0</h2>
+            <button class="btn-start" onclick="resetGame()">CHƠI LẠI</button>
+        </div>
+
+        <!-- Game Play Area -->
+        <div id="game-play">
+            <div class="question-box">
+                <div class="question-badge">NV: SALE</div>
+                <span id="question-text">Câu hỏi sẽ hiện ở đây...</span>
+            </div>
+
+            <div class="options-grid" id="options-container">
+                <!-- Options injected by JS -->
+            </div>
+        </div>
+
+        <!-- Characters -->
+        <div class="character-container" id="player">
+            <div class="pixel-trainer"></div>
+            <!-- Hammer Element -->
+            <div id="hammer" class="hammer">
+                <div class="pixel-hammer-art"></div>
+            </div>
+        </div>
+        <div class="enemy-container" id="enemy">
+            <div class="pixel-bug"></div>
+        </div>
+
+        <!-- Effects Container -->
+        <div id="confetti-container" class="confetti-container"></div>
+        <div id="feedback" class="feedback-overlay"></div>
+    </div>
+
+    <script>
+        // Dữ liệu Game: Kịch bản Đào tạo Bán hàng
+        const questions = [
+            {
+                q: "Bạn đang thiết kế khóa 'Chốt Sale'. Nhiệm vụ nào dưới đây là MỤC TIÊU HIỆU SUẤT (Performance Goal)?",
+                options: [
+                    { text: "Hiểu tâm lý khách hàng", correct: false, reason: "Sai: Đây là kiến thức (Knowledge), không phải hành vi." },
+                    { text: "Thực hiện 3 kỹ thuật chốt đơn", correct: true, reason: "Đúng! Đây là hành động quan sát được." },
+                    { text: "Có thái độ tích cực", correct: false, reason: "Sai: Thái độ là phạm trù trừu tượng, khó đo lường." },
+                    { text: "Biết về các loại giá", correct: false, reason: "Sai: 'Biết' là mục tiêu kiến thức." }
+                ]
+            },
+            {
+                q: "Mô tả nhiệm vụ: 'Xử lý khách hàng khó tính'. Điều gì còn thiếu trong mô tả này?",
+                options: [
+                    { text: "Thiếu động từ", correct: false, reason: "Sai: 'Xử lý' là động từ rồi." },
+                    { text: "Thiếu bối cảnh cụ thể", correct: true, reason: "Đúng! Khó tính ntn? Qua điện thoại hay trực tiếp?" },
+                    { text: "Nhiệm vụ quá nhỏ", correct: false, reason: "Sai: Nhiệm vụ này có độ lớn vừa phải." },
+                    { text: "Sai trật tự", correct: false, reason: "Sai: Không có vấn đề trật tự ở đây." }
+                ]
+            },
+            {
+                q: "Sếp yêu cầu đào tạo 'Làm sao để tăng doanh số gấp đôi'. Đây là lỗi gì trong phân tích?",
+                options: [
+                    { text: "Lỗi Mục Tiêu Kết Quả (Outcome)", correct: true, reason: "Đúng! Tăng doanh số là KẾT QUẢ, không phải hành vi để học." },
+                    { text: "Lỗi dùng từ ngữ chủ quan", correct: false, reason: "Sai." },
+                    { text: "Lỗi nhiệm vụ quá bé", correct: false, reason: "Sai." },
+                    { text: "Không có lỗi gì", correct: false, reason: "Sai." }
+                ]
+            },
+            {
+                q: "Khi phân tích kỹ năng 'Tư vấn sản phẩm', bước nào nên làm đầu tiên?",
+                options: [
+                    { text: "Báo giá sản phẩm", correct: false, reason: "Sai: Báo giá quá sớm dễ rớt khách." },
+                    { text: "Chốt đơn ngay", correct: false, reason: "Sai: Chưa tư vấn sao chốt?" },
+                    { text: "Lắng nghe nhu cầu (Probing)", correct: true, reason: "Đúng! Trình tự logic: Nghe -> Tư vấn -> Báo giá." },
+                    { text: "Trình bày tính năng", correct: false, reason: "Sai: Cần nghe trước khi nói." }
+                ]
+            },
+            {
+                q: "Nhiệm vụ: 'Thảo luận nhóm về quy trình bán hàng'. Đây là lỗi gì?",
+                options: [
+                    { text: "Lỗi Nhầm Nhiệm vụ học tập", correct: true, reason: "Đúng! Thảo luận là việc học, không phải việc làm (Job Task)." },
+                    { text: "Lỗi nhiệm vụ quá lớn", correct: false, reason: "Sai." },
+                    { text: "Lỗi nhận thức", correct: false, reason: "Sai." },
+                    { text: "Lỗi hành vi", correct: false, reason: "Sai." }
+                ]
+            },
+            {
+                q: "Kỹ năng 'Xây dựng lòng tin' trong B2B Sales thuộc loại phân tích nào?",
+                options: [
+                    { text: "Chỉ BTA (Hành vi)", correct: false, reason: "Sai: Không chỉ là hành động tay chân." },
+                    { text: "Kết hợp BTA và CTA", correct: true, reason: "Đúng! Cần cả hành vi giao tiếp và tư duy chiến lược." },
+                    { text: "Chỉ CTA (Nhận thức)", correct: false, reason: "Sai: Cần hành vi giao tiếp cụ thể." },
+                    { text: "Không cần phân tích", correct: false, reason: "Sai." }
+                ]
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let lives = 3;
+        let isProcessing = false;
+        
+        // --- AUDIO SYSTEM (Web Audio API) ---
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            } else if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // Tạo tiếng Ting (Coin sound)
+        function playCorrectSound() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(900, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1500, audioCtx.currentTime + 0.1);
+            
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.4);
+        }
+
+        // Tạo tiếng Bụp (Wrong sound)
+        function playWrongSound() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+            osc.frequency.linearRampToValueAtTime(50, audioCtx.currentTime + 0.3);
+
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.3);
+        }
+
+        // --- EFFECT SYSTEM ---
+        
+        // Tung bông (Confetti)
+        function fireConfetti() {
+            const container = document.getElementById('confetti-container');
+            const colors = ['#f00', '#0f0', '#00f', '#ff0', '#0ff', '#f0f'];
+            
+            for (let i = 0; i < 30; i++) {
+                const conf = document.createElement('div');
+                conf.classList.add('confetti');
+                
+                // Random vị trí, màu sắc, thời gian
+                const left = Math.random() * 100 + '%';
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                const duration = Math.random() * 1 + 0.5 + 's';
+                
+                conf.style.left = left;
+                conf.style.backgroundColor = color;
+                conf.style.animationDuration = duration;
+                
+                container.appendChild(conf);
+                
+                // Xóa sau khi rơi xong
+                setTimeout(() => {
+                    conf.remove();
+                }, 1500);
+            }
+        }
+
+        // Búa gõ (Hammer Bonk)
+        function triggerHammer() {
+            const hammer = document.getElementById('hammer');
+            hammer.classList.remove('bonk-animate'); // Reset animation
+            void hammer.offsetWidth; // Trigger reflow
+            hammer.classList.add('bonk-animate');
+            
+            // Rung màn hình khi búa gõ xuống (sau 0.2s)
+            setTimeout(() => {
+                document.getElementById('game-console').style.animation = "shake 0.4s";
+                setTimeout(() => document.getElementById('game-console').style.animation = "", 400);
+            }, 200);
+        }
+
+        // --- GAME LOGIC ---
+
+        function startGame() {
+            initAudio(); // Khởi động âm thanh khi user click
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-play').style.display = 'flex';
+            currentQuestionIndex = 0;
+            score = 0;
+            lives = 3;
+            updateHUD();
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            isProcessing = false;
+            const qData = questions[currentQuestionIndex];
+            document.getElementById('question-text').innerText = qData.q;
+            
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+
+            // Shuffle options
+            const shuffledOptions = [...qData.options].sort(() => Math.random() - 0.5);
+
+            shuffledOptions.forEach(opt => {
+                const btn = document.createElement('div');
+                btn.className = 'option-brick';
+                btn.innerText = opt.text;
+                btn.onclick = () => checkAnswer(opt, btn);
+                optionsContainer.appendChild(btn);
+            });
+
+            // Reset Enemy and Player positions
+            document.getElementById('enemy').style.opacity = '1';
+            document.getElementById('enemy').style.right = '50px';
+        }
+
+        function checkAnswer(option, btnElement) {
+            if (isProcessing) return;
+            isProcessing = true;
+            initAudio(); // Đảm bảo audio context luôn chạy
+
+            const player = document.getElementById('player');
+            const enemy = document.getElementById('enemy');
+            
+            if (option.correct) {
+                // --- ĐÚNG ---
+                playCorrectSound();
+                fireConfetti();
+                
+                // Hiệu ứng nhảy
+                player.classList.add('jump');
+                setTimeout(() => player.classList.remove('jump'), 500);
+
+                btnElement.style.backgroundColor = '#4caf50'; // Green
+                score += 100;
+                
+                // Hiệu ứng diệt quái
+                setTimeout(() => {
+                    enemy.style.opacity = '0';
+                    showFeedback("+100", "#ffcc00");
+                }, 250);
+
+                setTimeout(() => {
+                    nextLevel();
+                }, 1500);
+            } else {
+                // --- SAI ---
+                playWrongSound();
+                triggerHammer();
+                
+                btnElement.style.backgroundColor = '#5c3c1e'; // Dark/Dead
+                lives--;
+                
+                showFeedback("MISS!", "red");
+
+                if (lives <= 0) {
+                    setTimeout(gameOver, 1000);
+                } else {
+                    setTimeout(() => {
+                        isProcessing = false; // Cho chọn lại
+                        btnElement.style.opacity = 0.5;
+                        btnElement.onclick = null;
+                    }, 1000);
+                }
+            }
+            updateHUD();
+        }
+
+        function showFeedback(text, color) {
+            const fb = document.getElementById('feedback');
+            fb.innerText = text;
+            fb.style.color = color;
+            fb.style.animation = 'none';
+            fb.offsetHeight; /* trigger reflow */
+            fb.style.animation = 'floatUp 1s forwards';
+        }
+
+        function nextLevel() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questions.length) {
+                document.getElementById('level').innerText = "1-" + (currentQuestionIndex + 1);
+                loadQuestion();
+            } else {
+                gameWin();
+            }
+        }
+
+        function updateHUD() {
+            document.getElementById('score').innerText = score.toString().padStart(6, '0');
+            document.getElementById('lives').innerText = "X " + lives;
+        }
+
+        function gameWin() {
+            playCorrectSound();
+            fireConfetti();
+            document.getElementById('game-play').style.display = 'none';
+            document.getElementById('end-screen').classList.remove('hidden');
+            document.getElementById('end-title').innerText = "YOU WIN!";
+            document.getElementById('end-title').style.color = "#4caf50";
+            document.getElementById('final-score').innerText = score;
+        }
+
+        function gameOver() {
+            document.getElementById('game-play').style.display = 'none';
+            document.getElementById('end-screen').classList.remove('hidden');
+            document.getElementById('end-title').innerText = "GAME OVER";
+            document.getElementById('end-title').style.color = "#ff3333";
+            document.getElementById('final-score').innerText = score;
+        }
+
+        function resetGame() {
+            document.getElementById('end-screen').classList.add('hidden');
+            startGame();
+        }
+
+        /* Thêm Keyframes cho hiệu ứng rung */
+        const styleSheet = document.createElement("style");
+        styleSheet.innerText = `
+            @keyframes shake {
+                0% { transform: translate(1px, 1px) rotate(0deg); }
+                10% { transform: translate(-1px, -2px) rotate(-1deg); }
+                20% { transform: translate(-3px, 0px) rotate(1deg); }
+                30% { transform: translate(3px, 2px) rotate(0deg); }
+                40% { transform: translate(1px, -1px) rotate(1deg); }
+                50% { transform: translate(-1px, 2px) rotate(-1deg); }
+                60% { transform: translate(-3px, 1px) rotate(0deg); }
+                70% { transform: translate(3px, 1px) rotate(-1deg); }
+                80% { transform: translate(-1px, -1px) rotate(1deg); }
+                90% { transform: translate(1px, 2px) rotate(0deg); }
+                100% { transform: translate(1px, -2px) rotate(-1deg); }
+            }
+        `;
+        document.head.appendChild(styleSheet);
+
+    </script>
+</body>
+</html>
